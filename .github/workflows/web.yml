@@ -1,0 +1,49 @@
+name: Flutter web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test
+      # Raíz = versión rediseñada.
+      - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - run: mkdir site && cp -r build/web/. site/
+      # /antes/ = Home original, para capturas y comparativa.
+      - run: |
+          cp docs/antes/home_screen.dart lib/screens/home_screen.dart
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/antes/"
+          cp -r build/web site/antes
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

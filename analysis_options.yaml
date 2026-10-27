@@ -1,0 +1,7 @@
+include: package:flutter_lints/flutter.yaml
+
+# Aquí se pueden activar o desactivar reglas de estilo adicionales
+# si el equipo lo considera necesario. Se dejan las reglas por
+# defecto de Flutter, que son un buen punto de partida.
+linter:
+  rules:
