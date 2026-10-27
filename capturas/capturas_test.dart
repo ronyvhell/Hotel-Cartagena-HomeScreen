@@ -3,6 +3,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,6 +35,8 @@ Future<void> _foto(String nombre) => expectLater(
 void main() {
   testWidgets('capturas', (tester) async {
     await tester.runAsync(_cargarFuentes);
+    debugDisableShadows = false; // sombras reales, no borde negro de test
+    addTearDown(() => debugDisableShadows = true);
     tester.view.physicalSize = const Size(1170, 2532); // iPhone 13
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);

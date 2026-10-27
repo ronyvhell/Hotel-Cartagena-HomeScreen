@@ -322,7 +322,7 @@ class _Dato extends StatelessWidget {
     final texto = Theme.of(context).textTheme;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: sobre.withValues(alpha: 0.14),
           borderRadius: BorderRadius.circular(16),
@@ -340,13 +340,15 @@ class _Dato extends StatelessWidget {
                   height: 7,
                   decoration: BoxDecoration(color: punto, shape: BoxShape.circle),
                 ),
-                const SizedBox(width: 5),
+                const SizedBox(width: 4),
                 Flexible(
                   child: Text(
                     etiqueta,
                     overflow: TextOverflow.ellipsis,
-                    style: texto.labelSmall
-                        ?.copyWith(color: sobre.withValues(alpha: 0.85)),
+                    style: texto.labelSmall?.copyWith(
+                      color: sobre.withValues(alpha: 0.85),
+                      letterSpacing: 0,
+                    ),
                   ),
                 ),
               ],
