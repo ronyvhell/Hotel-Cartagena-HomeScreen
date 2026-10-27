@@ -36,7 +36,6 @@ void main() {
   testWidgets('capturas', (tester) async {
     await tester.runAsync(_cargarFuentes);
     debugDisableShadows = false; // sombras reales, no borde negro de test
-    addTearDown(() => debugDisableShadows = true);
     tester.view.physicalSize = const Size(1170, 2532); // iPhone 13
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -64,5 +63,6 @@ void main() {
       await tester.pumpAndSettle();
       await _foto('salir');
     }
+    debugDisableShadows = true; // el framework exige dejarlo como estaba
   });
 }
