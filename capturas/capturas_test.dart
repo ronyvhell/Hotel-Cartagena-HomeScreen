@@ -40,13 +40,7 @@ void main() {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
-    // Hotel con algo de movimiento para que la Home tenga datos.
     final hotel = Hotel()..registrarRecepcionista('rony', '1234');
-    final h = Huesped(nombre: 'Ana', documento: '1');
-    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 101, dias: 2);
-    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 104, dias: 3);
-    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 107, dias: 1);
-    hotel.realizarCheckIn(numeroHabitacion: 104, numeroPersonas: 2);
 
     await tester.pumpWidget(HotelCartagenaApp(hotel: hotel));
     await tester.pumpAndSettle();
@@ -55,6 +49,18 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'Usuario'), 'rony');
     await tester.enterText(find.widgetWithText(TextFormField, 'Contraseña'), '1234');
     await tester.tap(find.widgetWithText(FilledButton, 'Iniciar sesión'));
+    await tester.pumpAndSettle();
+    await _foto('home_vacio');
+
+    // Movimiento mientras otra pantalla está abierta; luego se vuelve.
+    await tester.tap(find.textContaining('Consultar'));
+    await tester.pumpAndSettle();
+    final h = Huesped(nombre: 'Ana', documento: '1');
+    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 101, dias: 2);
+    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 104, dias: 3);
+    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 107, dias: 1);
+    hotel.realizarCheckIn(numeroHabitacion: 104, numeroPersonas: 2);
+    await tester.pageBack();
     await tester.pumpAndSettle();
     await _foto('home');
 
