@@ -84,8 +84,17 @@ void main() {
       await tester.tap(find.text('Reservar').first);
       await tester.pumpAndSettle();
       await _foto('reserva');
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'Nombre del huésped'), 'Luis');
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'Documento del huésped'), '123');
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'Cantidad de días'), '2');
+      await tester.tap(find.text('Confirmar reserva'));
+      await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await _foto('rooms_actualizada');
     } else {
       await tester.pageBack();
       await tester.pumpAndSettle();
