@@ -10,10 +10,20 @@ import '../widgets/mensajes.dart';
 /// de días, y delega la validación de las reglas de negocio (que la
 /// habitación exista, esté disponible y los días sean mayores que
 /// cero) al servicio [Hotel].
+///
+/// [numeroInicial] permite llegar a esta pantalla con el número ya
+/// escrito (por ejemplo, al pulsar "Reservar" desde la lista de
+/// habitaciones). Si no se envía, el campo inicia vacío y el
+/// comportamiento es idéntico al original.
 class ReserveScreen extends StatefulWidget {
   final Hotel hotel;
+  final int? numeroInicial;
 
-  const ReserveScreen({super.key, required this.hotel});
+  const ReserveScreen({
+    super.key,
+    required this.hotel,
+    this.numeroInicial,
+  });
 
   @override
   State<ReserveScreen> createState() => _ReserveScreenState();
@@ -26,6 +36,16 @@ class _ReserveScreenState extends State<ReserveScreen> {
   final _documentoController = TextEditingController();
   final _numeroHabitacionController = TextEditingController();
   final _diasController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Si la pantalla se abrió desde la lista de habitaciones, el número
+    // ya viene precargado y el recepcionista no tiene que escribirlo.
+    if (widget.numeroInicial != null) {
+      _numeroHabitacionController.text = '${widget.numeroInicial}';
+    }
+  }
 
   @override
   void dispose() {

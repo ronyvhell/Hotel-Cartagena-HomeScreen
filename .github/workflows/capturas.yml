@@ -23,7 +23,7 @@ jobs:
           ls -R "$FLUTTER_ROOT/bin/cache/artifacts/material_fonts" | head -20 | sed 's/^/::notice ::/'
           PREFIJO=despues flutter test capturas/ --update-goldens > out.txt 2>&1 || { tail -40 out.txt | sed 's/^/::error ::/'; exit 1; }
           cp docs/antes/main.dart lib/main.dart
-          cp docs/antes/home_screen.dart docs/antes/login_screen.dart lib/screens/
+          cp docs/antes/home_screen.dart docs/antes/login_screen.dart docs/antes/rooms_screen.dart docs/antes/reserve_screen.dart lib/screens/
           PREFIJO=antes flutter test capturas/ --update-goldens > out.txt 2>&1 || { tail -40 out.txt | sed 's/^/::error ::/'; exit 1; }
       # Publica las PNG en la rama "capturas".
       - run: |

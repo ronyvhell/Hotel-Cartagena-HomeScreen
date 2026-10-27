@@ -68,6 +68,30 @@ void main() {
       await tester.tap(find.byTooltip('Cerrar sesión'));
       await tester.pumpAndSettle();
       await _foto('salir');
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+    }
+
+    // RoomsScreen: la pantalla del rediseño.
+    await tester.tap(find.textContaining('Consultar'));
+    await tester.pumpAndSettle();
+    await _foto('rooms');
+
+    if (prefijo == 'despues') {
+      await tester.tap(find.text('3–4'));
+      await tester.pumpAndSettle();
+      await _foto('rooms_filtro');
+      await tester.tap(find.text('Reservar').first);
+      await tester.pumpAndSettle();
+      await _foto('reserva');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Reservar'));
+      await tester.pumpAndSettle();
+      await _foto('reserva');
     }
     debugDisableShadows = true; // el framework exige dejarlo como estaba
   });

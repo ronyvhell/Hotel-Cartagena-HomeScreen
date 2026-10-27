@@ -4,90 +4,316 @@ import '../enums/estado_habitacion.dart';
 import '../enums/tipo_habitacion.dart';
 import '../models/habitacion.dart';
 import '../services/hotel.dart';
+import 'reserve_screen.dart';
 
-/// Ventana de consulta de habitaciones disponibles (RF03).
+/// Consulta de habitaciones disponibles (RF03), rediseñada.
 ///
-/// Muestra las habitaciones disponibles agrupadas por tipo, tal como
-/// exige el requisito funcional. Es un [StatelessWidget] porque no
-/// necesita guardar estado propio: cada vez que se abre, vuelve a leer
-/// los datos actuales del [Hotel].
-class RoomsScreen extends StatelessWidget {
+/// Mejoras sobre la versión original (StatelessWidget con un
+/// ExpansionTile por tipo):
+/// 1. Botón "Reservar" por habitación: abre [ReserveScreen] con el
+///    número ya cargado.
+/// 2. Filtro "¿Cuántas personas?" según la capacidad (solo presentación).
+/// 3. Resumen con disponibles, reservadas y ocupadas.
+/// 4. [StatefulWidget]: se actualiza al volver, con gesto y botón.
+/// 5. Limpieza visual: sin chip redundante, capacidad con ícono,
+///    plurales correctos y estado vacío con sugerencia.
+///
+/// Las reglas de negocio siguen en [Hotel]; aquí solo se leen datos.
+class RoomsScreen extends StatefulWidget {
   final Hotel hotel;
 
   const RoomsScreen({super.key, required this.hotel});
 
   @override
+  State<RoomsScreen> createState() => _RoomsScreenState();
+}
+
+class _RoomsScreenState extends State<RoomsScreen> {
+  /// Opciones del filtro: etiqueta y capacidad mínima que deben tener.
+  static const _filtros = [('Todas', 1), ('1', 1), ('2', 2), ('3–4', 3)];
+
+  int _filtro = 0;
+
+  /// Abre la reserva con el número precargado y refresca al volver.
+  Future<void> _reservar(Habitacion habitacion) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ReserveScreen(
+        hotel: widget.hotel,
+        numeroInicial: habitacion.numero,
+      ),
+    ));
+    if (mounted) setState(() {});
+  }
+
+  /// [Hotel] vive en memoria: basta con reconstruir para ver lo actual.
+  Future<void> _refrescar() async => setState(() {});
+
+  int _contar(EstadoHabitacion estado) =>
+      widget.hotel.habitaciones.where((h) => h.estado == estado).length;
+
+  @override
   Widget build(BuildContext context) {
-    // Se calcula la agrupación en cada construcción de la pantalla,
-    // para reflejar siempre el estado más reciente de las habitaciones
-    // (por ejemplo, después de una reserva hecha desde otra ventana).
-    final Map<TipoHabitacion, List<Habitacion>> agrupadas =
-        hotel.consultarDisponiblesAgrupadas();
+    final texto = Theme.of(context).textTheme;
+    final minimo = _filtros[_filtro].$2;
+    final agrupadas = widget.hotel.consultarDisponiblesAgrupadas();
+
+    // Solo los tipos con habitaciones que sirven al grupo elegido.
+    final secciones = [
+      for (final tipo in TipoHabitacion.values)
+        if (tipo.capacidadMaxima >= minimo && agrupadas[tipo]!.isNotEmpty)
+          _Seccion(
+            tipo: tipo,
+            habitaciones: agrupadas[tipo]!,
+            onReservar: _reservar,
+          ),
+    ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Habitaciones disponibles')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        // Se recorre cada tipo de habitación y se muestra una tarjeta
-        // desplegable (ExpansionTile) con sus habitaciones disponibles.
-        children: TipoHabitacion.values.map((tipo) {
-          final habitaciones = agrupadas[tipo]!;
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: ExpansionTile(
-              // Se muestra ya expandida para que el recepcionista vea
-              // de inmediato cuántas habitaciones hay de cada tipo.
-              initiallyExpanded: true,
-              title: Text(
-                '$tipo (${habitaciones.length} disponible(s))',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              children: habitaciones.isEmpty
-                  ? const [
-                      ListTile(
-                        leading: Icon(Icons.info_outline),
-                        title: Text('Sin habitaciones disponibles'),
-                      ),
-                    ]
-                  : habitaciones
-                      .map((h) => ListTile(
-                            leading: const Icon(Icons.door_front_door),
-                            title: Text('Habitación ${h.numero}'),
-                            subtitle:
-                                Text('Capacidad: ${h.capacidad} persona(s)'),
-                            trailing: _EstadoChip(estado: h.estado),
-                          ))
-                      .toList(),
+      appBar: AppBar(
+        title: const Text('Habitaciones'),
+        actions: [
+          // En escritorio el gesto de arrastrar no existe: botón visible.
+          IconButton(
+            tooltip: 'Actualizar',
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _refrescar,
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _refrescar,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                Row(
+                  children: [
+                    _Dato(
+                        valor: _contar(EstadoHabitacion.disponible),
+                        etiqueta: 'Disponibles',
+                        color: Colors.green.shade500),
+                    const SizedBox(width: 8),
+                    _Dato(
+                        valor: _contar(EstadoHabitacion.reservada),
+                        etiqueta: 'Reservadas',
+                        color: Colors.amber.shade600),
+                    const SizedBox(width: 8),
+                    _Dato(
+                        valor: _contar(EstadoHabitacion.ocupada),
+                        etiqueta: 'Ocupadas',
+                        color: Colors.red.shade400),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('¿Cuántas personas?',
+                    style: texto.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                SegmentedButton<int>(
+                  showSelectedIcon: false,
+                  segments: [
+                    for (var i = 0; i < _filtros.length; i++)
+                      ButtonSegment(value: i, label: Text(_filtros[i].$1)),
+                  ],
+                  selected: {_filtro},
+                  onSelectionChanged: (s) => setState(() => _filtro = s.first),
+                ),
+                const SizedBox(height: 8),
+                if (secciones.isEmpty) const _Vacio() else ...secciones,
+              ],
             ),
-          );
-        }).toList(),
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Pequeña etiqueta de color que muestra el estado de una habitación.
-///
-/// Aunque en esta pantalla todas las habitaciones listadas están
-/// disponibles, el widget se deja genérico (soporta los tres estados)
-/// por si en el futuro se reutiliza para mostrar habitaciones en
-/// cualquier estado.
-class _EstadoChip extends StatelessWidget {
-  final EstadoHabitacion estado;
+/// Contador del resumen: punto de color, etiqueta y número.
+class _Dato extends StatelessWidget {
+  final int valor;
+  final String etiqueta;
+  final Color color;
 
-  const _EstadoChip({required this.estado});
+  const _Dato({required this.valor, required this.etiqueta, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final MaterialColor color = switch (estado) {
-      EstadoHabitacion.disponible => Colors.green,
-      EstadoHabitacion.reservada => Colors.orange,
-      EstadoHabitacion.ocupada => Colors.red,
+    final colores = Theme.of(context).colorScheme;
+    final texto = Theme.of(context).textTheme;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colores.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(etiqueta,
+                      overflow: TextOverflow.ellipsis,
+                      style: texto.labelMedium
+                          ?.copyWith(color: colores.onSurfaceVariant)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('$valor',
+                style: texto.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Un tipo de habitación: encabezado con capacidad y conteo, y sus filas.
+class _Seccion extends StatelessWidget {
+  final TipoHabitacion tipo;
+  final List<Habitacion> habitaciones;
+  final void Function(Habitacion) onReservar;
+
+  const _Seccion({
+    required this.tipo,
+    required this.habitaciones,
+    required this.onReservar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colores = Theme.of(context).colorScheme;
+    final texto = Theme.of(context).textTheme;
+    final n = habitaciones.length;
+    final icono = switch (tipo) {
+      TipoHabitacion.sencilla => Icons.single_bed_outlined,
+      TipoHabitacion.doble => Icons.bed_outlined,
+      TipoHabitacion.suite => Icons.king_bed_outlined,
     };
-    return Chip(
-      label: Text(estado.toString()),
-      backgroundColor: color.withOpacity(0.15),
-      labelStyle: TextStyle(color: color.shade700),
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Row(
+              children: [
+                Icon(icono, size: 22, color: colores.primary),
+                const SizedBox(width: 8),
+                Text('$tipo',
+                    style: texto.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Text('$n ${n == 1 ? 'disponible' : 'disponibles'}',
+                    style: texto.labelLarge?.copyWith(color: colores.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          Material(
+            color: colores.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(20),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (var i = 0; i < n; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      indent: 76,
+                      color: colores.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  _Fila(
+                    habitacion: habitaciones[i],
+                    onReservar: () => onReservar(habitaciones[i]),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Una habitación: número, capacidad con ícono y botón Reservar.
+class _Fila extends StatelessWidget {
+  final Habitacion habitacion;
+  final VoidCallback onReservar;
+
+  const _Fila({required this.habitacion, required this.onReservar});
+
+  @override
+  Widget build(BuildContext context) {
+    final colores = Theme.of(context).colorScheme;
+    final capacidad = habitacion.capacidad;
+    return ListTile(
+      contentPadding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
+      leading: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: colores.primaryContainer,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text('${habitacion.numero}',
+            style: TextStyle(
+                fontWeight: FontWeight.w700, color: colores.onPrimaryContainer)),
+      ),
+      title: Text('Habitación ${habitacion.numero}',
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Row(
+        children: [
+          Icon(Icons.person_outline, size: 16, color: colores.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text('$capacidad ${capacidad == 1 ? 'persona' : 'personas'}'),
+        ],
+      ),
+      trailing: FilledButton.tonal(
+        onPressed: onReservar,
+        style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+        child: const Text('Reservar'),
+      ),
+    );
+  }
+}
+
+/// Estado vacío con una sugerencia de qué hacer.
+class _Vacio extends StatelessWidget {
+  const _Vacio();
+
+  @override
+  Widget build(BuildContext context) {
+    final colores = Theme.of(context).colorScheme;
+    final texto = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        children: [
+          Icon(Icons.search_off_rounded, size: 48, color: colores.onSurfaceVariant),
+          const SizedBox(height: 12),
+          Text('No hay habitaciones disponibles',
+              style: texto.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text('Ajusta el filtro de personas o vuelve más tarde.',
+              textAlign: TextAlign.center,
+              style: texto.bodyMedium?.copyWith(color: colores.onSurfaceVariant)),
+        ],
+      ),
     );
   }
 }
