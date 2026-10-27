@@ -1,0 +1,28 @@
+name: Capturas
+
+on:
+  push:
+    branches: [main]
+    paths: ['capturas/**', 'lib/**', '.github/workflows/capturas.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test capturas --update-goldens > out.txt 2>&1 || { tail -40 out.txt | sed 's/^/::error ::/'; exit 1; }
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add capturas/out
+          git commit -m "Capturas antes/después" || exit 0
+          git pull --rebase && git push
