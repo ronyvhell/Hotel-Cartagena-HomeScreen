@@ -32,7 +32,8 @@ jobs:
       - run: mkdir site && cp -r build/web/. site/
       # /antes/ = Home original, para capturas y comparativa.
       - run: |
-          cp docs/antes/home_screen.dart lib/screens/home_screen.dart
+          cp docs/antes/main.dart lib/main.dart
+          cp docs/antes/home_screen.dart docs/antes/login_screen.dart lib/screens/
           flutter build web --release --base-href "/${{ github.event.repository.name }}/antes/"
           cp -r build/web site/antes
       - uses: actions/upload-pages-artifact@v3

@@ -21,10 +21,11 @@ void main() {
   testWidgets('Resumen inicial y refresco al volver', (tester) async {
     final hotel = await _abrirHome(tester);
 
-    expect(find.text('Hola, ana'), findsOneWidget);
+    expect(find.text('ana'), findsOneWidget);
     expect(find.text('9'), findsOneWidget);
     expect(find.text('Sin llegadas pendientes'), findsOneWidget);
     expect(find.text('0 de 9 habitaciones en uso'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
 
     // Cambia el estado mientras otra pantalla está abierta.
     await tester.tap(find.text('Consultar habitaciones'));
@@ -40,6 +41,7 @@ void main() {
     expect(find.text('1 llegada pendiente'), findsOneWidget);
     expect(find.text('8 habitaciones libres'), findsOneWidget);
     expect(find.text('1 de 9 habitaciones en uso'), findsOneWidget);
+    expect(find.text('11%'), findsOneWidget);
   });
 
   testWidgets('Cerrar sesión pide confirmación', (tester) async {
@@ -51,6 +53,6 @@ void main() {
 
     await tester.tap(find.text('Cancelar'));
     await tester.pumpAndSettle();
-    expect(find.text('Hola, ana'), findsOneWidget);
+    expect(find.text('ana'), findsOneWidget);
   });
 }

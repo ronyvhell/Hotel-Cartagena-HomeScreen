@@ -83,80 +83,109 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colores = Theme.of(context).colorScheme;
+    final texto = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Hotel Cartagena')),
-      // SingleChildScrollView evita que el teclado tape los campos en
-      // pantallas pequeñas.
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            // Limita el ancho del formulario para que también se vea
-            // bien en pantallas grandes (tablets o escritorio).
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(Icons.hotel, size: 72, color: Colors.indigo),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Bienvenido',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Campo de usuario.
-                  TextFormField(
-                    controller: _usuarioController,
-                    decoration: const InputDecoration(
-                      labelText: 'Usuario',
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    validator: (valor) =>
-                        (valor == null || valor.trim().isEmpty)
-                            ? 'El usuario no puede estar vacío'
-                            : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Campo de contraseña, con botón para mostrar/ocultar.
-                  TextFormField(
-                    controller: _contrasenaController,
-                    obscureText: _ocultarContrasena,
-                    decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(_ocultarContrasena
-                            ? Icons.visibility
-                            : Icons.visibility_off),
-                        onPressed: () => setState(
-                            () => _ocultarContrasena = !_ocultarContrasena),
+      body: SafeArea(
+        // SingleChildScrollView evita que el teclado tape los campos en
+        // pantallas pequeñas.
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              // Limita el ancho del formulario en tablets o escritorio.
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Marca: mismo degradado que la tarjeta de la Home.
+                    Center(
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [colores.primary, colores.tertiary],
+                          ),
+                        ),
+                        child: Icon(Icons.hotel_rounded,
+                            size: 36, color: colores.onPrimary),
                       ),
                     ),
-                    validator: (valor) => (valor == null || valor.isEmpty)
-                        ? 'La contraseña no puede estar vacía'
-                        : null,
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Bienvenido',
+                      textAlign: TextAlign.center,
+                      style: texto.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Hotel Cartagena · Recepción',
+                      textAlign: TextAlign.center,
+                      style: texto.bodyMedium
+                          ?.copyWith(color: colores.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 32),
 
-                  FilledButton.icon(
-                    onPressed: _iniciarSesion,
-                    icon: const Icon(Icons.login),
-                    label: const Text('Iniciar sesión'),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _irARegistro,
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Registrar nuevo recepcionista'),
-                  ),
-                ],
+                    TextFormField(
+                      controller: _usuarioController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Usuario',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (valor) =>
+                          (valor == null || valor.trim().isEmpty)
+                              ? 'El usuario no puede estar vacío'
+                              : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Contraseña, con botón para mostrar/ocultar.
+                    TextFormField(
+                      controller: _contrasenaController,
+                      obscureText: _ocultarContrasena,
+                      onFieldSubmitted: (_) => _iniciarSesion(),
+                      decoration: InputDecoration(
+                        labelText: 'Contraseña',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          tooltip: _ocultarContrasena
+                              ? 'Mostrar contraseña'
+                              : 'Ocultar contraseña',
+                          icon: Icon(_ocultarContrasena
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined),
+                          onPressed: () => setState(
+                              () => _ocultarContrasena = !_ocultarContrasena),
+                        ),
+                      ),
+                      validator: (valor) => (valor == null || valor.isEmpty)
+                          ? 'La contraseña no puede estar vacía'
+                          : null,
+                    ),
+                    const SizedBox(height: 24),
+
+                    FilledButton.icon(
+                      onPressed: _iniciarSesion,
+                      icon: const Icon(Icons.login_rounded),
+                      label: const Text('Iniciar sesión'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _irARegistro,
+                      child: const Text('¿Eres nuevo? Crear cuenta'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
