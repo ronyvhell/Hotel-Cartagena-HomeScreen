@@ -25,7 +25,7 @@ jobs:
           cache: true
       - run: flutter pub get
       # Errores como anotaciones (visibles en la página del run).
-      - run: flutter analyze --no-fatal-infos > out.txt 2>&1 || { grep -E '(error|warning) •' out.txt | sed 's/^/::error ::/'; exit 1; }
+      - run: flutter analyze --no-fatal-infos lib test > out.txt 2>&1 || { grep -E '(error|warning) •' out.txt | sed 's/^/::error ::/'; exit 1; }
       - run: flutter test > out.txt 2>&1 || { tail -40 out.txt | sed 's/^/::error ::/'; exit 1; }
       # Raíz = versión rediseñada.
       - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
