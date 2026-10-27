@@ -3,7 +3,6 @@ name: Capturas
 on:
   push:
     branches: [main]
-    paths: ['capturas/**', 'lib/**', '.github/workflows/capturas.yml']
   workflow_dispatch:
 
 permissions:
@@ -19,11 +18,19 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter test capturas --update-goldens > out.txt 2>&1 || { tail -40 out.txt | sed 's/^/::error ::/'; exit 1; }
       - run: |
-          ls -la capturas/out 2>&1 | sed 's/^/::warning ::/'
-          git config user.name github-actions
-          git config user.email github-actions@users.noreply.github.com
-          git add capturas/out
-          git commit -m "Capturas antes/después" || exit 0
-          git push 2> err.txt || { sed 's/^/::error ::/' err.txt; exit 1; }
+          export FLUTTER_ROOT="$(dirname "$(dirname "$(which flutter)")")"
+          ls -R "$FLUTTER_ROOT/bin/cache/artifacts/material_fonts" | head -20 | sed 's/^/::notice ::/'
+          PREFIJO=despues flutter test capturas/ --update-goldens > out.txt 2>&1 || { tail -40 out.txt | sed 's/^/::error ::/'; exit 1; }
+          cp docs/antes/main.dart lib/main.dart
+          cp docs/antes/home_screen.dart docs/antes/login_screen.dart lib/screens/
+          PREFIJO=antes flutter test capturas/ --update-goldens > out.txt 2>&1 || { tail -40 out.txt | sed 's/^/::error ::/'; exit 1; }
+      # Publica las PNG en la rama "capturas".
+      - run: |
+          cp -r capturas/out /tmp/out
+          git checkout --orphan capturas
+          git rm -rfq .
+          cp /tmp/out/*.png .
+          git add *.png
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -qm "Capturas"
+          git push -f origin capturas

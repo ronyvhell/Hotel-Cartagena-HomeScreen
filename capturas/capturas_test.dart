@@ -1,26 +1,24 @@
-// Genera capturas PNG (390x844, tamaño de celular) de las pantallas
-// antes y después. Se ejecuta en CI: flutter test capturas --update-goldens
+// Genera capturas PNG de la app en tamaño celular (no corre con `flutter test`).
+// Uso: PREFIJO=despues flutter test capturas/ --update-goldens
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:hotel_cartagena_flutter/main.dart';
 import 'package:hotel_cartagena_flutter/models/huesped.dart';
-import 'package:hotel_cartagena_flutter/screens/home_screen.dart';
-import 'package:hotel_cartagena_flutter/screens/login_screen.dart';
 import 'package:hotel_cartagena_flutter/services/hotel.dart';
 
-import 'antes/home_screen.dart' as antes;
-import 'antes/login_screen.dart' as antes;
+final prefijo = Platform.environment['PREFIJO'] ?? 'despues';
 
-/// Carga Roboto e íconos reales (por defecto el test usa cajas grises).
-Future<void> _fuentes() async {
-  final raiz = Platform.environment['FLUTTER_ROOT']!;
-  final dir = Directory('$raiz/bin/cache/artifacts/material_fonts');
+/// Carga Roboto e íconos reales del SDK (por defecto los tests usan cuadros).
+Future<void> _cargarFuentes() async {
+  final dir = Directory(
+      '${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts');
   final roboto = FontLoader('Roboto');
   final iconos = FontLoader('MaterialIcons');
-  for (final f in dir.listSync().whereType<File>()) {
+  for (final f in dir.listSync(recursive: true).whereType<File>()) {
     final nombre = f.uri.pathSegments.last;
     final datos = Future.value(ByteData.sublistView(f.readAsBytesSync()));
     if (nombre.startsWith('Roboto-')) roboto.addFont(datos);
@@ -30,56 +28,38 @@ Future<void> _fuentes() async {
   await iconos.load();
 }
 
-/// Hotel con datos de ejemplo: 2 reservadas y 1 ocupada.
-Hotel _hotel() {
-  final hotel = Hotel()..registrarRecepcionista('rony', '1');
-  for (final n in [101, 104, 107]) {
-    hotel.reservarHabitacion(
-        huesped: Huesped(nombre: 'Huésped $n', documento: '$n'),
-        numeroHabitacion: n,
-        dias: 2);
-  }
-  hotel.realizarCheckIn(numeroHabitacion: 107, numeroPersonas: 2);
-  return hotel;
-}
-
-final _temaAntes = ThemeData(
-  colorSchemeSeed: Colors.indigo,
-  useMaterial3: true,
-  inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
-);
-
-Future<void> _foto(
-    WidgetTester t, String nombre, ThemeData tema, Widget pantalla) async {
-  final clave = GlobalKey();
-  await t.pumpWidget(RepaintBoundary(
-    key: clave,
-    child: MaterialApp(
-        debugShowCheckedModeBanner: false, theme: tema, home: pantalla),
-  ));
-  await t.pumpAndSettle();
-  await expectLater(find.byKey(clave), matchesGoldenFile('out/$nombre.png'));
-}
+Future<void> _foto(String nombre) => expectLater(
+    find.byType(MaterialApp), matchesGoldenFile('out/${prefijo}_$nombre.png'));
 
 void main() {
-  testWidgets('capturas', (t) async {
-    await t.runAsync(_fuentes);
-    t.view.physicalSize = const Size(1170, 2532);
-    t.view.devicePixelRatio = 3;
-    addTearDown(t.view.reset);
+  testWidgets('capturas', (tester) async {
+    await tester.runAsync(_cargarFuentes);
+    tester.view.physicalSize = const Size(1170, 2532); // iPhone 13
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
 
-    // El tema nuevo se toma de la app real.
-    await t.pumpWidget(HotelCartagenaApp(hotel: Hotel()));
-    final temaNuevo = Theme.of(t.element(find.byType(LoginScreen)));
+    // Hotel con algo de movimiento para que la Home tenga datos.
+    final hotel = Hotel()..registrarRecepcionista('rony', '1234');
+    final h = Huesped(nombre: 'Ana', documento: '1');
+    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 101, dias: 2);
+    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 104, dias: 3);
+    hotel.reservarHabitacion(huesped: h, numeroHabitacion: 107, dias: 1);
+    hotel.realizarCheckIn(numeroHabitacion: 104, numeroPersonas: 2);
 
-    final hotel = _hotel();
-    final rony = hotel.iniciarSesion('rony', '1');
+    await tester.pumpWidget(HotelCartagenaApp(hotel: hotel));
+    await tester.pumpAndSettle();
+    await _foto('login');
 
-    await _foto(t, 'antes_login', _temaAntes, antes.LoginScreen(hotel: hotel));
-    await _foto(t, 'despues_login', temaNuevo, LoginScreen(hotel: hotel));
-    await _foto(t, 'antes_home', _temaAntes,
-        antes.HomeScreen(hotel: hotel, recepcionista: rony));
-    await _foto(t, 'despues_home', temaNuevo,
-        HomeScreen(hotel: hotel, recepcionista: rony));
+    await tester.enterText(find.widgetWithText(TextFormField, 'Usuario'), 'rony');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Contraseña'), '1234');
+    await tester.tap(find.widgetWithText(FilledButton, 'Iniciar sesión'));
+    await tester.pumpAndSettle();
+    await _foto('home');
+
+    if (prefijo == 'despues') {
+      await tester.tap(find.byTooltip('Cerrar sesión'));
+      await tester.pumpAndSettle();
+      await _foto('salir');
+    }
   });
 }
