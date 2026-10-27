@@ -277,10 +277,16 @@ class _Fila extends StatelessWidget {
       title: Text('Habitación ${habitacion.numero}',
           style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.person_outline, size: 16, color: colores.onSurfaceVariant),
           const SizedBox(width: 4),
-          Text('$capacidad ${capacidad == 1 ? 'persona' : 'personas'}'),
+          Flexible(
+            child: Text(
+              '$capacidad ${capacidad == 1 ? 'persona' : 'personas'}',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
       trailing: FilledButton.tonal(
